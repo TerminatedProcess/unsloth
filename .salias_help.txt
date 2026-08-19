@@ -1,11 +1,13 @@
 
 UNSLOTH STUDIO SERVICE (UNSLOTH_URL)
-  unstart           Start the Studio backend
-  unstop            Stop the Studio backend
-  unrestart         Restart the Studio backend
-  unstatus          Show unit status
-  unlog             Show the last 50 log lines
-  unlogf            Follow the log live
+  Acts on the "unsloth" Service Dashboard group (:8090), not a single unit --
+  services added to the group are picked up automatically.
+  unstart           Start every service in the group
+  unstop            Stop every service in the group (reverse order)
+  unrestart         Restart the group
+  unstatus          Show each member's state and start mode
+  unlog             Show the last 50 log lines across the group
+  unlogf            Follow the group log live
 
 GIT (FORK SYNC)
   gitupdate         Fast-forward main from upstream, rebase mryan on top, push both

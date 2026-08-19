@@ -6,6 +6,9 @@
 # The installed Studio is a SEPARATE artifact from this checkout: it lives in
 # ~/.unsloth and is what the systemd unit runs. Editing this repo does not
 # change the running service.
+set -gx UNSLOTH_GROUP 'unsloth'
+# Fallback only -- the group is the real target. Used when the Service Dashboard
+# (:8090) is down, so the commands below still work on a bare systemd box.
 set -gx UNSLOTH_UNIT 'unsloth-studio.service'
 set -gx UNSLOTH_URL 'http://localhost:8889'
 
@@ -16,16 +19,54 @@ function help
     sed "s|UNSLOTH_URL|$UNSLOTH_URL|" ./.salias_help.txt
 end
 
-# ── Unsloth Studio service (systemd) ──
-# Manual-start unit on port 8889, group "Unsloth" in the Service Dashboard
+# ── Unsloth Studio service (Service Dashboard group) ──
+# Manual-start unit on port 8889, in group "Unsloth" on the Service Dashboard
 # (:8090). Port 8889 rather than Unsloth's default 8888 because PortHub
 # permanently reserves 8888 for its own admin API.
-alias unstart='systemctl --user start $UNSLOTH_UNIT'
-alias unstop='systemctl --user stop $UNSLOTH_UNIT'
-alias unrestart='systemctl --user restart $UNSLOTH_UNIT'
-alias unstatus='systemctl --user status $UNSLOTH_UNIT --no-pager'
-alias unlog='journalctl --user -u $UNSLOTH_UNIT --no-pager -n 50'
-alias unlogf='journalctl --user -u $UNSLOTH_UNIT -f'
+#
+# These act on the GROUP, not on one unit: adding a second service to the
+# "unsloth" group in ~/.config/porthub_service_dash/groups.json makes every
+# command below cover it automatically, with no edit here. The dashboard also
+# starts members in declared order and stops them in reverse, which a bare
+# `systemctl start` on one unit cannot do.
+alias unstart='svcgroup unsloth start'
+alias unstop='svcgroup unsloth stop'
+alias unrestart='svcgroup unsloth restart'
+alias unstatus='svcgroup unsloth status'
+
+# journalctl is per-unit and svcgroup has no log action, so the group's members
+# are read back from the dashboard. Falls back to the lone unit with :8090 down.
+function _unsloth_units --description "Units in the Unsloth dashboard group"
+    set -l units (curl -sf -m 5 http://localhost:8090/api/services 2>/dev/null | python3 -c '
+import json, sys
+gid = sys.argv[1]
+g = next((x for x in json.load(sys.stdin).get("groups", []) if x.get("id") == gid), None)
+for m in (g or {}).get("members", []):
+    if m.get("unit"):
+        print(m["unit"])
+' $UNSLOTH_GROUP 2>/dev/null)
+    if test (count $units) -eq 0
+        echo $UNSLOTH_UNIT
+        return
+    end
+    printf '%s\n' $units
+end
+
+function unlog --description "Last 50 log lines across the Unsloth group"
+    set -l args
+    for u in (_unsloth_units)
+        set -a args -u $u
+    end
+    journalctl --user $args --no-pager -n 50
+end
+
+function unlogf --description "Follow the Unsloth group log"
+    set -l args
+    for u in (_unsloth_units)
+        set -a args -u $u
+    end
+    journalctl --user $args -f
+end
 
 # ── Git (fork sync) ──
 # Branch-separated method:
