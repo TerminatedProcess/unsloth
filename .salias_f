@@ -1,0 +1,45 @@
+# Unsloth fork (TerminatedProcess/unsloth) - aliases and functions
+# All commands defined here, sourced by .salias
+# Run 'help' to see all available commands
+
+# ── Environment ──
+# The installed Studio is a SEPARATE artifact from this checkout: it lives in
+# ~/.unsloth and is what the systemd unit runs. Editing this repo does not
+# change the running service.
+set -gx UNSLOTH_UNIT 'unsloth-studio.service'
+set -gx UNSLOTH_URL 'http://localhost:8889'
+
+# ── Help ──
+# Relative path: .salias_f is always sourced with the project dir as PWD.
+function help
+    clear
+    sed "s|UNSLOTH_URL|$UNSLOTH_URL|" ./.salias_help.txt
+end
+
+# ── Unsloth Studio service (systemd) ──
+# Manual-start unit on port 8889, group "Unsloth" in the Service Dashboard
+# (:8090). Port 8889 rather than Unsloth's default 8888 because PortHub
+# permanently reserves 8888 for its own admin API.
+alias unstart='systemctl --user start $UNSLOTH_UNIT'
+alias unstop='systemctl --user stop $UNSLOTH_UNIT'
+alias unrestart='systemctl --user restart $UNSLOTH_UNIT'
+alias unstatus='systemctl --user status $UNSLOTH_UNIT --no-pager'
+alias unlog='journalctl --user -u $UNSLOTH_UNIT --no-pager -n 50'
+alias unlogf='journalctl --user -u $UNSLOTH_UNIT -f'
+
+# ── Git (fork sync) ──
+# Commit local changes to the fork (origin), sync from the original
+# author's repo (upstream, read-only), then push the merged result.
+function gitupdate
+   set -l branch (git rev-parse --abbrev-ref HEAD)
+   git add -A
+   if not git diff --cached --quiet
+      git commit -m "gitupdate: local changes $(date '+%Y-%m-%d %H:%M:%S')"
+   else
+      echo "gitupdate: nothing local to commit"
+   end
+   echo "gitupdate: pulling from upstream/$branch"
+   git pull --no-edit upstream $branch; or return 1
+   echo "gitupdate: pushing to origin/$branch (fork)"
+   git push origin $branch
+end
