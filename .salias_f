@@ -68,6 +68,17 @@ function unlogf --description "Follow the Unsloth group log"
     journalctl --user $args -f
 end
 
+# ── Agents against the local model ──
+# The CLI defaults UNSLOTH_STUDIO_URL to :8888 (start.py), but this instance is
+# on 8889, so the override is required or `start` fails with "No running Unsloth
+# server found".
+#
+# Literal 127.0.0.1, not $UNSLOTH_URL: the server binds IPv4 loopback only
+# (127.0.0.1:8889), and "localhost" can resolve to ::1 first, which nothing is
+# listening on. The agent API key is minted and cached automatically on a
+# loopback base -- no password prompt.
+alias unclaude='env UNSLOTH_STUDIO_URL=http://127.0.0.1:8889 unsloth start claude'
+
 # ── Git (fork sync) ──
 # Branch-separated method:
 #   main  = verbatim mirror of upstream (unslothai/unsloth). Never commit here.

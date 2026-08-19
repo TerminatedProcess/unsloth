@@ -9,6 +9,10 @@ UNSLOTH STUDIO SERVICE (UNSLOTH_URL)
   unlog             Show the last 50 log lines across the group
   unlogf            Follow the group log live
 
+AGENTS ON THE LOCAL MODEL
+  unclaude          Point Claude Code at this Studio (:8889) and launch it
+                    Takes the usual flags: unclaude --model unsloth/Qwen3-4B
+
 GIT (FORK SYNC)
   gitupdate         Fast-forward main from upstream, rebase mryan on top, push both
                     main = verbatim upstream mirror | mryan = your work
