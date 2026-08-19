@@ -8,4 +8,5 @@ UNSLOTH STUDIO SERVICE (UNSLOTH_URL)
   unlogf            Follow the log live
 
 GIT (FORK SYNC)
-  gitupdate         Commit local work, pull upstream, push to the fork
+  gitupdate         Fast-forward main from upstream, rebase mryan on top, push both
+                    main = verbatim upstream mirror | mryan = your work

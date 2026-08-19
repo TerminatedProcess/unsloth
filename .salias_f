@@ -28,18 +28,47 @@ alias unlog='journalctl --user -u $UNSLOTH_UNIT --no-pager -n 50'
 alias unlogf='journalctl --user -u $UNSLOTH_UNIT -f'
 
 # ── Git (fork sync) ──
-# Commit local changes to the fork (origin), sync from the original
-# author's repo (upstream, read-only), then push the merged result.
-function gitupdate
-   set -l branch (git rev-parse --abbrev-ref HEAD)
-   git add -A
-   if not git diff --cached --quiet
-      git commit -m "gitupdate: local changes $(date '+%Y-%m-%d %H:%M:%S')"
-   else
-      echo "gitupdate: nothing local to commit"
-   end
-   echo "gitupdate: pulling from upstream/$branch"
-   git pull --no-edit upstream $branch; or return 1
-   echo "gitupdate: pushing to origin/$branch (fork)"
-   git push origin $branch
+# Branch-separated method:
+#   main  = verbatim mirror of upstream (unslothai/unsloth). Never commit here.
+#   mryan = personal customizations, rebased on top of main.
+# Keeping main a strict ancestor of upstream/main means --ff-only always
+# succeeds, so conflicts can only ever surface during the mryan rebase --
+# resolved once, on the branch that actually owns the changes.
+function gitupdate --description "Sync fork from upstream: ff main, rebase mryan on top"
+    set -l current (git branch --show-current)
+
+    # Checking out main with a dirty tree could carry stray edits onto the mirror.
+    if not git diff --quiet; or not git diff --cached --quiet
+        echo "gitupdate: working tree dirty -- commit or stash on mryan first."
+        return 1
+    end
+
+    echo "gitupdate: fetching upstream..."
+    git fetch upstream; or return 1
+
+    echo "gitupdate: fast-forwarding main (mirror of upstream)..."
+    git checkout main; or return 1
+    if not git merge upstream/main --ff-only
+        echo "gitupdate: ff-only refused -- main has drifted from upstream."
+        echo "           Something was committed to main that belongs on mryan."
+        echo "           Recover: git branch -f mryan main; git reset --hard upstream/main"
+        git checkout $current
+        return 1
+    end
+    git push origin main; or return 1
+
+    echo "gitupdate: rebasing mryan onto main..."
+    git checkout mryan; or return 1
+    if not git rebase main
+        echo "gitupdate: rebase stopped on a conflict -- you are mid-rebase on mryan."
+        echo "           Resolve, then: git rebase --continue"
+        echo "           and finally:   git push origin mryan --force-with-lease"
+        return 1
+    end
+    # Rebase rewrites mryan's history, so the push must overwrite the remote.
+    # --force-with-lease (never plain --force) aborts if the remote moved.
+    git push origin mryan --force-with-lease; or return 1
+
+    git checkout $current
+    echo "gitupdate: done -- main mirrors upstream, mryan rebased on top."
 end
