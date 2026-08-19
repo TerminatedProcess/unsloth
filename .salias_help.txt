@@ -9,6 +9,12 @@ UNSLOTH STUDIO SERVICE (UNSLOTH_URL)
   unlog             Show the last 50 log lines across the group
   unlogf            Follow the group log live
 
+MODEL FARM (hub -> Studio, hard links, no second copy)
+  farmplan          Dry run: show what would change, write nothing
+  farmsync          Additive sync -- run after importing models into the hub
+  rebuildfarm       Destroy the farm and rebuild it -- run after deleting models
+                    (a stale hard link keeps the disk space allocated)
+
 AGENTS ON THE LOCAL MODEL
   unclaude          Point Claude Code at this Studio (:8889) and launch it
                     Takes the usual flags: unclaude --model unsloth/Qwen3-4B

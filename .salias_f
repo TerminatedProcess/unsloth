@@ -11,6 +11,9 @@ set -gx UNSLOTH_GROUP 'unsloth'
 # (:8090) is down, so the commands below still work on a bare systemd box.
 set -gx UNSLOTH_UNIT 'unsloth-studio.service'
 set -gx UNSLOTH_URL 'http://localhost:8889'
+# Captured at source time (.salias_f is always sourced with the project dir as
+# PWD), so the farm commands work from any directory and survive moving the repo.
+set -gx UNSLOTH_REPO (pwd)
 
 # ── Help ──
 # Relative path: .salias_f is always sourced with the project dir as PWD.
@@ -67,6 +70,25 @@ function unlogf --description "Follow the Unsloth group log"
     end
     journalctl --user $args -f
 end
+
+# ── Model farm (HubRoot -> Studio) ──
+# local/farm_unsloth.py links /mnt/llm/hub/hubmodels into /mnt/llm/unsloth so
+# Studio sees every hub model without a second copy. Weights are HARD links:
+# Studio's loader resolves symlinks before a containment check and rejects any
+# weight resolving outside its folder ("gguf_filename must resolve to a file
+# inside the repo").
+#
+#   farmplan     dry run -- prints what would change, writes nothing
+#   farmsync     additive; run after IMPORTING models into the hub
+#   rebuildfarm  destroys the farm first, then rebuilds
+#
+# Use rebuildfarm after DELETING models: a plain sync never removes anything, and
+# a stale hard link keeps the blob's disk space allocated even after HubRoot
+# purges it. It only unlinks the farm's own entries -- adapters the Studio trainer
+# published into the LoRA dir are real files and are left alone.
+alias farmplan='python3 $UNSLOTH_REPO/local/farm_unsloth.py'
+alias farmsync='python3 $UNSLOTH_REPO/local/farm_unsloth.py --apply'
+alias rebuildfarm='python3 $UNSLOTH_REPO/local/farm_unsloth.py --apply --rebuild'
 
 # ── Agents against the local model ──
 # The CLI defaults UNSLOTH_STUDIO_URL to :8888 (start.py), but this instance is
