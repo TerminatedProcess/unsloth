@@ -6,7 +6,7 @@
 # The installed Studio is a SEPARATE artifact from this checkout: it lives in
 # ~/.unsloth and is what the systemd unit runs. Editing this repo does not
 # change the running service.
-set -gx UNSLOTH_GROUP 'unsloth'
+set -gx UNSLOTH_GROUP 'llm-gateways'
 # Fallback only -- the group is the real target. Used when the Service Dashboard
 # (:8090) is down, so the commands below still work on a bare systemd box.
 set -gx UNSLOTH_UNIT 'unsloth-studio.service'
@@ -23,19 +23,19 @@ function help
 end
 
 # ── Unsloth Studio service (Service Dashboard group) ──
-# Manual-start unit on port 8889, in group "Unsloth" on the Service Dashboard
+# Manual-start unit on port 8889, in group "LLM-gateways" on the Service Dashboard
 # (:8090). Port 8889 rather than Unsloth's default 8888 because PortHub
 # permanently reserves 8888 for its own admin API.
 #
 # These act on the GROUP, not on one unit: adding a second service to the
-# "unsloth" group in ~/.config/porthub_service_dash/groups.json makes every
+# "llm-gateways" group in ~/.config/porthub_service_dash/groups.json makes every
 # command below cover it automatically, with no edit here. The dashboard also
 # starts members in declared order and stops them in reverse, which a bare
 # `systemctl start` on one unit cannot do.
-alias unstart='svcgroup unsloth start'
-alias unstop='svcgroup unsloth stop'
-alias unrestart='svcgroup unsloth restart'
-alias unstatus='svcgroup unsloth status'
+alias unstart='svcgroup $UNSLOTH_GROUP start'
+alias unstop='svcgroup $UNSLOTH_GROUP stop'
+alias unrestart='svcgroup $UNSLOTH_GROUP restart'
+alias unstatus='svcgroup $UNSLOTH_GROUP status'
 
 # journalctl is per-unit and svcgroup has no log action, so the group's members
 # are read back from the dashboard. Falls back to the lone unit with :8090 down.
